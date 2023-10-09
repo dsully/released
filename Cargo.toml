@@ -1,0 +1,63 @@
+[package]
+categories = [ "command-line-utilities" ]
+description = "Install and manage dev tools."
+edition = "2021"
+license = "MIT"
+name = "released"
+repository = "https://github.com/dsully/released"
+version = "0.0.1"
+
+[profile.release]
+incremental = true
+lto = true
+opt-level = 3
+
+[profile.dev]
+incremental = true
+
+[dependencies]
+anyhow = "1.0"
+async-std = { version = "1.12", features = [ "attributes", "tokio1" ] }
+async-trait = "0.1"
+clap = { version = "4.4", features = [
+    "cargo",
+    "color",
+    "derive",
+    "suggestions",
+    "wrap_help",
+] }
+clap-verbosity-flag = "2.0"
+clap_complete = "4.4"
+color-eyre = "0.6"
+compress-tools = "0.14.3"
+config = { version = "0.13.3", default-features = false, features = [ "toml" ] }
+indicatif = "0.17"
+is_executable = "1.0"
+octocrab = "0.25"
+regex = "1.9"
+reqwest = "0.11"
+semver = "1.0"
+serde = { version = "1.0", features = [ "derive" ] }
+serde_json = "1.0"
+shadow-rs = { version = "0.24", default-features = false }
+skim = "0.10"
+tabled = { version = "0.14", features = [ "std" ] }
+tempfile = "3.8"
+test-case = "3.2"
+thiserror = "1.0"
+tokio = { version = "1.32.0", features = [
+    "fs",
+    "macros",
+    "net",
+    "rt",
+    "rt-multi-thread",
+] }
+toml = { version = "0.8", features = [ "preserve_order" ] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = [ "env-filter" ] }
+trauma = "2.2.4"
+walkdir = "2.4"
+xdg = "2.5.2"
+
+[build-dependencies]
+shadow-rs = { version = "0.24", default-features = false }
