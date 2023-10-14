@@ -36,7 +36,7 @@ impl System {
     pub fn is_os_match(&self, s: &'_ str) -> bool {
         let os_regex = self.os.get_match_regex();
 
-        debug!("OS Regex[{}], matching {}", os_regex.to_string(), s);
+        debug!("OS Regex[{}], trying to match {}", os_regex.to_string(), s);
 
         os_regex.is_match(s)
     }
@@ -44,13 +44,13 @@ impl System {
     pub fn is_arch_match(&self, s: &'_ str) -> bool {
         let arch_regex = self.architecture.get_match_regex();
 
-        debug!("Architecture Regex[{}], matching {}", arch_regex.to_string(), s);
+        debug!("Architecture Regex[{}], trying to match {}", arch_regex.to_string(), s);
 
         arch_regex.is_match(s)
     }
 
     pub fn is_universal_match(&self, s: &'_ str) -> bool {
-        debug!("macoS Univeral match: {}", s);
+        debug!("macOS Univeral trying to match: {}", s);
 
         Regex::new(r#"(?i).*univeral"#).expect("Unable to create regex for macOS Universal").is_match(s)
     }

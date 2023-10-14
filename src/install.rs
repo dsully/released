@@ -1,50 +1,61 @@
 use anyhow::{Context, Result};
 use compress_tools::*;
+use futures::stream::StreamExt;
 use octocrab::models::repos::{Asset, Release};
 use regex::Regex;
 use reqwest::Url;
 use skim::prelude::*;
 use std::fs;
 use std::io::Cursor;
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
+use tempfile::tempdir;
+use tokio::io::AsyncWriteExt;
 use tracing::{debug, info};
-use trauma::{
-    download::Download,
-    downloader::{DownloaderBuilder, ProgressBarOpts, StyleOptions},
-    Error,
-};
 use walkdir::{DirEntry, WalkDir};
 
 use crate::{
     config::{Config, InstalledPackage, Package},
     errors::CommandError,
+    spinner::spinner,
     system::System,
     version::{parse_version, Version},
 };
 
-pub async fn download(url: &Url, directory: &PathBuf) -> Result<PathBuf, Error> {
-    let style = ProgressBarOpts::new(
-        Some(ProgressBarOpts::TEMPLATE_PIP.into()),
-        Some(ProgressBarOpts::CHARS_LINE.into()),
-        true,
-        false,
-    );
+pub async fn download(url: &Url, directory: &PathBuf) -> Result<PathBuf> {
+    // TODO: Add better error handling.
 
-    let mut download = Download::try_from(url)?;
-    let filename = directory.join(download.filename.clone());
+    let filename = url
+        .path_segments()
+        .ok_or_else(|| CommandError::InvalidUrl(url.to_string()))?
+        .rev()
+        .find(|segment| !segment.is_empty())
+        .unwrap();
 
-    download.filename = filename.display().to_string();
+    let destination = directory.join(filename);
 
-    info!("Downloading file to {:?}", &filename);
+    debug!("Creating destination directory {:?}", directory);
 
-    DownloaderBuilder::new()
-        .directory(directory.into())
-        .style_options(StyleOptions::new(style.clone(), style.clone()))
-        .build()
-        .download(&[download])
-        .await;
+    fs::create_dir_all(directory)?;
 
-    Ok(filename)
+    debug!("Creating destination file {:?}", &destination);
+
+    let mut file = tokio::fs::File::create(&destination).await?;
+
+    let s = spinner();
+
+    s.set_message(format!("Downloading {} ...", &filename));
+
+    let mut stream = reqwest::get(url.clone()).await?.error_for_status()?.bytes_stream();
+
+    while let Some(item) = stream.next().await {
+        file.write_all_buf(&mut item.context("Unable to retrieve next chunk from download stream..")?)
+            .await?;
+    }
+
+    s.finish_with_message(format!("Downloaded {}", &filename));
+
+    Ok(destination)
 }
 
 pub async fn release_for_repository(owner: &'_ str, repo: &'_ str, version: &'_ Version) -> Result<Release> {
@@ -75,37 +86,57 @@ pub async fn latest_release_tag(owner: &'_ str, repo: &'_ str) -> Option<Version
     }
 }
 
-pub fn platform_asset(release: &'_ Release, system: &'_ System, user_pattern: &'_ str, show: bool) -> Option<Asset> {
+pub fn platform_asset(release: &'_ Release, system: &'_ System, user_pattern: &'_ str, _show: bool) -> Option<Asset> {
     //
     let regex = match user_pattern.is_empty() {
         false => Some(Regex::new(user_pattern).unwrap_or_else(|_| panic!("{} is not a valid Regular Expression", user_pattern))),
         true => None,
     };
 
-    let platform_assets: Vec<Asset> = release
+    let mut platform_assets: Vec<Asset> = release
         .assets
         .iter()
         .filter_map(|asset| if asset.name.ends_with(".sha256") { None } else { Some(asset.clone()) })
         .filter_map(|asset| if asset.name.ends_with(".txt") { None } else { Some(asset.clone()) })
+        .collect();
+
+    platform_assets = platform_assets
+        .iter()
         .filter_map(|asset| {
             if let Some(r) = &regex {
-                debug!("Matching '{}' against '{}'", r.as_str(), &asset.name);
-
                 if r.is_match(&asset.name) {
+                    debug!("User pattern matched '{}' against '{}'", r.as_str(), &asset.name);
                     Some(asset.clone())
                 } else {
                     None
                 }
             } else if system.is_match(&asset.name) {
-                debug!("Asset info: {:?}", asset.name);
-                Some(asset.clone())
-            } else if show {
+                debug!("System and OS match '{}'", &asset.name);
                 Some(asset.clone())
             } else {
                 None
             }
         })
         .collect();
+
+    if platform_assets.is_empty() {
+        platform_assets = release
+            .assets
+            .iter()
+            .filter_map(|asset| {
+                if system.is_os_match(&asset.name) {
+                    debug!("OS match '{}'", &asset.name);
+                    Some(asset.clone())
+                } else {
+                    None
+                }
+            })
+            .collect();
+    }
+
+    if platform_assets.is_empty() {
+        platform_assets = release.assets.clone();
+    }
 
     match &platform_assets.len() {
         2.. => {
@@ -184,52 +215,87 @@ pub async fn install_release(config: &mut Config, package: &'_ Package, system: 
         }
     };
 
-    match download(&asset.browser_download_url, &cache_path).await {
+    let temp_path = tempdir().context("Unable to create temporary directory")?.into_path();
+
+    match download(&asset.browser_download_url, &temp_path).await {
         Ok(asset_path) => {
             info!("Completed downloading {}", asset.browser_download_url);
             info!("Path: {}", asset_path.display());
 
-            let source = fs::File::open(&asset_path).context("Unable to open downloaded file")?;
+            let mut is_standalone = false;
 
-            uncompress_archive(&source, &cache_path, Ownership::Preserve).context("Unable to unarchive file")?;
+            match infer::get_from_path(&asset_path) {
+                Ok(Some(ft)) if ft.matcher_type() == infer::MatcherType::Archive => {
+                    //
+                    let source = fs::File::open(&asset_path).context("Unable to open downloaded file")?;
 
-            info!("Successfully extracted '{}'.", asset_path.display());
+                    uncompress_archive(&source, &cache_path, Ownership::Preserve).context("Unable to unarchive file")?;
 
-            let binary_file_name = if !&package.file_pattern.is_empty() {
-                package.file_pattern.clone()
-            } else {
+                    info!("Successfully extracted '{}'.", asset_path.display());
+                }
+                Ok(Some(ft)) if ft.matcher_type() == infer::MatcherType::App => is_standalone = true,
+                Ok(Some(ft)) if ft.mime_type() == "text/x-shellscript" => is_standalone = true,
+                Ok(Some(ft)) => {
+                    return Err(CommandError::InvalidFileTypeError {
+                        path: asset_path,
+                        ft: ft.mime_type().to_string(),
+                    }
+                    .into())
+                }
+                _ => {
+                    return Err(CommandError::InvalidFileTypeError {
+                        path: asset_path,
+                        ft: String::from("Unknown"),
+                    }
+                    .into())
+                }
+            }
+
+            let binary_file_name = if is_standalone {
+                asset_path.to_string_lossy().to_string()
+            } else if package.file_pattern.is_empty() {
                 package.alias.clone()
+            } else {
+                package.file_pattern.clone()
             };
 
-            match find_binary(&cache_path, &binary_file_name) {
-                Some(bin_file) => {
-                    let destination = bin_path.join(bin_file.file_name());
-
-                    info!("Binary '{}'.", bin_file.path().display());
-                    info!("Destination '{}'.", destination.display());
-
-                    fs::rename(bin_file.path(), &destination).context(format!("Unable to move file to {}", bin_path.display()))?;
-                    fs::remove_file(&asset_path).context("Unable to remove temporary file")?;
-
-                    if !config.installed.contains_key(&package.alias) {
-                        config.packages.insert(package.name.to_owned(), package.to_owned());
-                    }
-
-                    config.installed.insert(
-                        package.alias.to_owned(),
-                        InstalledPackage {
-                            name: package.name.to_owned(),
-                            version: version.as_tag().to_owned(),
-                            path: destination.to_owned(),
-                        },
-                    );
-
-                    config.save()?;
-
-                    Ok(())
+            let source = if is_standalone {
+                asset_path
+            } else {
+                match find_binary(&cache_path, &binary_file_name) {
+                    Some(bin_file) => bin_file.into_path(),
+                    None => return Err(CommandError::UnableToFindBinaryError { binary_file_name }.into()),
                 }
-                _ => Err(CommandError::UnableToFindBinaryError { binary_file_name }.into()),
+            };
+
+            let destination = if is_standalone {
+                bin_path.join(&package.alias)
+            } else {
+                bin_path.join(source.file_name().unwrap())
+            };
+
+            info!("Binary '{}'.", source.display());
+            info!("Renaming to '{}' and setting executable.", destination.display());
+
+            fs::rename(&source, &destination).context(format!("Unable to move file to {}", bin_path.display()))?;
+            fs::set_permissions(&destination, fs::Permissions::from_mode(0o755))?;
+
+            if !config.installed.contains_key(&package.alias) {
+                config.packages.insert(package.name.to_owned(), package.to_owned());
             }
+
+            config.installed.insert(
+                package.alias.to_owned(),
+                InstalledPackage {
+                    name: package.name.to_owned(),
+                    version: version.as_tag().to_owned(),
+                    path: destination.to_owned(),
+                },
+            );
+
+            config.save()?;
+
+            Ok(())
         }
         Err(_) => Err(CommandError::AssetDownloadError {
             asset_uri: asset.browser_download_url,

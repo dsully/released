@@ -9,15 +9,20 @@ use tracing_subscriber::{filter::filter_fn, prelude::*};
 // https://crates.io/crates/shadow-rs
 shadow!(build);
 
+mod cli;
 mod cmd;
 mod config;
 mod errors;
 mod install;
+mod spinner;
 mod system;
 mod version;
 
-use self::config::Config;
-use self::system::System;
+use self::cli::RunCommand;
+use self::cmd::add::Add;
+use self::cmd::list::List;
+use self::cmd::remove::Remove;
+use self::cmd::update::Update;
 
 #[derive(Debug, Clone, Parser)]
 #[command(author, version, about, long_about = None)]
@@ -42,50 +47,13 @@ pub struct CLI {
 #[derive(Debug, Clone, Subcommand)]
 pub enum Commands {
     /// Add a package/release.
-    Add {
-        /// Name of the package to install.
-        ///
-        /// To install a specific version use name@version, for example: `cli/cli@v2.4.0`
-        name: String,
-        /// Alias to use instead of the repository name.
-        ///
-        /// This is how you will call the package on the command line.
-        #[arg(short = 'A', long)]
-        alias: Option<String>,
-        /// Pattern used to determine which file from the release to download.
-        ///
-        /// This can be used to override the autodetect mechanism to determine which assets to download.
-        #[arg(short, long)]
-        asset_pattern: Option<String>,
-        /// Filter used to find the executable.
-        #[arg(short, long)]
-        file_filter: Option<String>,
-        /// Allow install of pre-release versions of the package.
-        ///
-        /// When `show` is provided this includes pre-release versions in the list,
-        /// When it is not the most recent version is selected, that could be a pre-release or
-        /// official release depending on release date.
-        #[arg(short = 'P', long)]
-        pre_release: bool,
-        /// Show available versions
-        ///
-        /// Shows a list of versions available to install.
-        #[arg(short = 'S', long)]
-        show: bool,
-    },
+    Add(Add),
     /// Remove a package.
-    Remove {
-        /// Name of the package to remove.
-        name: String,
-    },
+    Remove(Remove),
     /// List installed packages.
-    List,
+    List(List),
     /// Update packages to the latest version available from GitHub.
-    Update {
-        /// Which package to update, when omitted all packages will be updated.
-        name: Option<String>,
-    },
-
+    Update(Update),
     /// Generate shell completions to stdout.
     Completions {
         #[clap(value_enum)]
@@ -96,6 +64,11 @@ pub enum Commands {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    ctrlc::set_handler(|| {
+        std::process::exit(0);
+    })
+    .expect("Error setting Ctrl-C handler");
+
     let cli = CLI::parse();
 
     // Log from this crate only.
@@ -109,36 +82,11 @@ async fn main() -> Result<()> {
         octocrab::initialise(octocrab::Octocrab::builder().personal_token(env_api_token.to_str().unwrap().into()).build()?);
     };
 
-    let system = System::default();
-
-    let mut packages = Config::load()?;
-
     match cli.command {
-        Commands::Add {
-            name,
-            alias,
-            asset_pattern,
-            file_filter,
-            pre_release,
-            show,
-        } => {
-            cmd::add(
-                &mut packages,
-                &name,
-                &system,
-                cmd::Patterns {
-                    asset: asset_pattern.to_owned(),
-                    file: file_filter.to_owned(),
-                },
-                alias.to_owned(),
-                show,
-                pre_release,
-            )
-            .await?
-        }
-        Commands::Remove { name } => cmd::remove(&mut packages, &name).await?,
-        Commands::List => cmd::list(&packages).await?,
-        Commands::Update { name } => cmd::update(&mut packages, &system, name).await?,
+        Commands::Add(add) => add.run().await?,
+        Commands::Remove(remove) => remove.run().await?,
+        Commands::List(list) => list.run().await?,
+        Commands::Update(update) => update.run().await?,
 
         Commands::Completions { shell } => generate(shell, &mut CLI::command(), "released", &mut io::stdout().lock()),
     };

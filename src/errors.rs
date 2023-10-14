@@ -30,6 +30,12 @@ pub enum CommandError {
         os: OperatingSystem,
     },
 
+    #[error("Downloaded file isn't an archive or executable: '{path}': {ft}")]
+    InvalidFileTypeError { path: PathBuf, ft: String },
+
+    #[error("Invalid URL: {0}")]
+    InvalidUrl(String),
+
     #[error("Unable to find binary '{binary_file_name}' in ~/.local/bin/")]
     UnableToFindBinaryError { binary_file_name: String },
 
@@ -46,14 +52,14 @@ pub enum CommandError {
 #[derive(Debug, Error)]
 pub enum ConfigError {
     #[error("Failed to create the directory '{path}'. {source}")]
-    FailedToCreateDirectory { path: std::path::PathBuf, source: std::io::Error },
+    FailedToCreateDirectory { path: PathBuf, source: std::io::Error },
 
     #[error("Unable to read file '{file_path}'. {source:?}")]
-    FileReadError { file_path: std::path::PathBuf, source: std::io::Error },
+    FileReadError { file_path: PathBuf, source: std::io::Error },
 
     #[error("Failed to deserialize file: {file_path}, using {format}. {msg}")]
     DeserializationError {
-        file_path: std::path::PathBuf,
+        file_path: PathBuf,
         format: String,
         msg: String,
     },
