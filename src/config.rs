@@ -5,7 +5,6 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::OnceLock;
-use toml;
 use tracing::debug;
 
 use crate::errors::ConfigError;
@@ -14,7 +13,7 @@ static SKIM_COLORS: OnceLock<String> = OnceLock::new();
 
 pub fn skim_colors() -> &'static str {
     SKIM_COLORS.get_or_init(|| {
-        vec![
+        [
             "bg+:#3B4252",
             "bg:#2E3440",
             "spinner:#81A1C1",
@@ -76,13 +75,11 @@ pub fn config_path() -> Result<PathBuf> {
 
     match xdg_dir.place_config_file("config.toml") {
         Ok(path) => Ok(path),
-        Err(e) => {
-            return Err(ConfigError::FailedToCreateDirectory {
-                path: xdg_dir.get_config_home(),
-                source: e,
-            }
-            .into())
+        Err(e) => Err(ConfigError::FailedToCreateDirectory {
+            path: xdg_dir.get_config_home(),
+            source: e,
         }
+        .into()),
     }
 }
 
@@ -91,13 +88,11 @@ pub fn state_path() -> Result<PathBuf> {
 
     match xdg_dir.place_state_file("installed.json") {
         Ok(path) => Ok(path),
-        Err(e) => {
-            return Err(ConfigError::FailedToCreateDirectory {
-                path: xdg_dir.get_state_home(),
-                source: e,
-            }
-            .into())
+        Err(e) => Err(ConfigError::FailedToCreateDirectory {
+            path: xdg_dir.get_state_home(),
+            source: e,
         }
+        .into()),
     }
 }
 
@@ -161,14 +156,15 @@ impl Config {
 
         debug!("Writing config file to {:?}", &config_file);
 
-        fs::write(&config_file, toml::to_string(&self.packages).context("Serializing config into TOML format")?)
-            .context(format!("Writing config file: {}", config_file.display()))?;
+        let config_toml = toml::to_string(&self.packages).context("Serializing config into TOML format")?;
+
+        fs::write(&config_file, config_toml).context(format!("Writing config file: {}", config_file.display()))?;
 
         debug!("Writing installed file to {:?}", &state_file);
 
-        let state = to_string_pretty(&self.installed).context(format!("Failed to serialize state to JSON."))?;
+        let state = to_string_pretty(&self.installed).context("Failed to serialize state to JSON.")?;
 
-        fs::write(&state_file, state).context(format!("Failed to write state file!"))?;
+        fs::write(&state_file, state).context("Failed to write state file!")?;
 
         debug!("Wrote installed state to file {:?}", &state_file);
 
@@ -179,10 +175,10 @@ impl Config {
 impl Package {
     pub fn new(name: &'_ str, alias: &'_ str, asset_pattern: &'_ str, file_pattern: &'_ str) -> Self {
         Self {
-            name: name.to_string(),
-            alias: alias.to_string(),
-            asset_pattern: asset_pattern.to_string(),
-            file_pattern: file_pattern.to_string(),
+            name: name.to_owned(),
+            alias: alias.to_owned(),
+            asset_pattern: asset_pattern.to_owned(),
+            file_pattern: file_pattern.to_owned(),
         }
     }
 }
