@@ -80,10 +80,13 @@ pub async fn release_for_repository(owner: &'_ str, repo: &'_ str, version: &'_ 
 }
 
 pub async fn latest_release_tag(owner: &'_ str, repo: &'_ str) -> Option<Version> {
-    match octocrab::instance().repos(owner, repo).releases().get_latest().await {
-        Ok(tag) => Some(parse_version(&tag.tag_name)),
-        Err(_) => None,
-    }
+    octocrab::instance()
+        .repos(owner, repo)
+        .releases()
+        .get_latest()
+        .await
+        .ok()
+        .map(|tag| parse_version(&tag.tag_name))
 }
 
 pub fn platform_asset(release: &'_ Release, system: &'_ System, user_pattern: &'_ str, _show: bool) -> Option<Asset> {
@@ -140,8 +143,7 @@ pub fn platform_asset(release: &'_ Release, system: &'_ System, user_pattern: &'
 
     match &platform_assets.len() {
         2.. => {
-            let item_reader =
-                SkimItemReader::default().of_bufread(Cursor::new(platform_assets.iter().map(|a| a.name.to_string()).collect::<Vec<_>>().join("\n")));
+            let reader = SkimItemReader::default().of_bufread(Cursor::new(platform_assets.iter().map(|a| a.name.to_string() + "\n").collect::<String>()));
 
             let selected_item: Vec<Asset> = Skim::run_with(
                 &SkimOptionsBuilder::default()
@@ -149,7 +151,7 @@ pub fn platform_asset(release: &'_ Release, system: &'_ System, user_pattern: &'
                     .height(Some("25%"))
                     .build()
                     .unwrap(),
-                Some(item_reader),
+                Some(reader),
             )
             .map(|items| {
                 items
@@ -160,9 +162,9 @@ pub fn platform_asset(release: &'_ Release, system: &'_ System, user_pattern: &'
             })
             .unwrap();
 
-            Some(selected_item.get(0).unwrap().to_owned())
+            Some(selected_item[0].clone())
         }
-        1 => Some(platform_assets.get(0).unwrap().clone()),
+        1 => Some(platform_assets[0].clone()),
         _ => None,
     }
 }
