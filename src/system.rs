@@ -72,7 +72,7 @@ impl Display for OperatingSystem {
 }
 
 impl OperatingSystem {
-    fn get_match_regex(&self) -> Regex {
+    pub fn get_match_regex(&self) -> Regex {
         match self {
             Self::Linux => Regex::new(r#"(?i).*linux.*"#).expect("Unable to create regex for Linux"),
             Self::Darwin => Regex::new(r#"(?i).*mac|macos|darwin"#).expect("Unable to create regex for macOS"),
@@ -96,7 +96,7 @@ impl Display for PlatformArchitecture {
 }
 
 impl PlatformArchitecture {
-    fn get_match_regex(&self) -> Regex {
+    pub fn get_match_regex(&self) -> Regex {
         match self {
             Self::Amd64 => Regex::new(r#"(?i).*amd64|x86_64.*"#).expect("Unable to create regex for amd64"),
             Self::Arm64 => Regex::new(r#"(?i).*arm64|aarch64.*"#).expect("Unable to create regex for arm64"),

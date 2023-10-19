@@ -5,10 +5,12 @@ use octocrab::models::repos::{Asset, Release};
 use regex::Regex;
 use reqwest::Url;
 use skim::prelude::*;
+use std::collections::HashMap;
 use std::fs;
 use std::io::Cursor;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
+use strfmt::strfmt;
 use tempfile::tempdir;
 use tokio::io::AsyncWriteExt;
 use tracing::{debug, info};
@@ -91,51 +93,51 @@ pub async fn latest_release_tag(owner: &'_ str, repo: &'_ str) -> Option<Version
 
 pub fn platform_asset(release: &'_ Release, system: &'_ System, user_pattern: &'_ str, _show: bool) -> Option<Asset> {
     //
-    let regex = match user_pattern.is_empty() {
-        false => Some(Regex::new(user_pattern).unwrap_or_else(|_| panic!("{} is not a valid Regular Expression", user_pattern))),
-        true => None,
-    };
-
+    // First pass, remove all assets that are not for the current platform.
     let mut platform_assets: Vec<Asset> = release
         .assets
         .iter()
-        .filter_map(|asset| if asset.name.ends_with(".sha256") { None } else { Some(asset.clone()) })
-        .filter_map(|asset| if asset.name.ends_with(".txt") { None } else { Some(asset.clone()) })
+        .filter(|asset| !asset.name.ends_with(".sha256") && !asset.name.ends_with(".txt") && !asset.name.ends_with(".sig"))
+        .cloned()
         .collect();
 
-    platform_assets = platform_assets
-        .iter()
-        .filter_map(|asset| {
-            if let Some(r) = &regex {
-                if r.is_match(&asset.name) {
-                    debug!("User pattern matched '{}' against '{}'", r.as_str(), &asset.name);
-                    Some(asset.clone())
-                } else {
-                    None
-                }
-            } else if system.is_match(&asset.name) {
-                debug!("System and OS match '{}'", &asset.name);
-                Some(asset.clone())
-            } else {
-                None
-            }
-        })
-        .collect();
+    // Only one asset, such as diff-so-fancy?
+    if platform_assets.len() == 1 {
+        debug!("Only one asset, returning: {}", platform_assets[0].name);
 
-    if platform_assets.is_empty() {
-        platform_assets = release
-            .assets
-            .iter()
-            .filter_map(|asset| {
-                if system.is_os_match(&asset.name) {
-                    debug!("OS match '{}'", &asset.name);
-                    Some(asset.clone())
-                } else {
-                    None
-                }
-            })
-            .collect();
+        return Some(platform_assets[0].clone());
     }
+
+    // Second pass - use the user provided pattern to match against the asset name if provided.
+    // If the regex contains the OS or architecture placeholders, insert them into the pattern.
+    //
+    // Otherwise, match against the OS of the current system.
+    platform_assets = match user_pattern.is_empty() {
+        true => platform_assets.iter().filter(|asset| system.is_os_match(&asset.name)).cloned().collect(),
+        false => {
+            let s = HashMap::from([
+                ("os".to_string(), system.os.get_match_regex().to_string()),
+                ("arch".to_string(), system.architecture.get_match_regex().to_string()),
+            ]);
+
+            let pattern = strfmt(user_pattern, &s).unwrap();
+
+            debug!("Matching against pattern: {}", pattern);
+
+            let r = Regex::new(&pattern).unwrap_or_else(|_| panic!("{} is not a valid Regular Expression", &pattern));
+
+            platform_assets.iter().filter(|asset| r.is_match(&asset.name)).cloned().collect()
+        }
+    };
+
+    // TODO: Handle macOS / Universal case.
+
+    if platform_assets.len() == 1 {
+        return Some(platform_assets[0].clone());
+    }
+
+    // Pass through the assets again, this time matching against the architecture.
+    platform_assets.retain(|asset| system.is_arch_match(&asset.name));
 
     if platform_assets.is_empty() {
         platform_assets = release.assets.clone();
