@@ -39,7 +39,7 @@ permissions:
 on:
   push:
     tags:
-      - "**[0-9]+.[0-9]+.[0-9]+*"
+      - '**[0-9]+.[0-9]+.[0-9]+*'
   pull_request:
 
 jobs:
@@ -195,7 +195,7 @@ jobs:
             name=$(echo "$release" | jq .app_name --raw-output)
             version=$(echo "$release" | jq .app_version --raw-output)
 
-            git add "Formula/${name}.rb"
+            git add Formula/${name}.rb
             git commit -m "${name} ${version}"
           done
           git push
