@@ -49,10 +49,13 @@ pub enum Commands {
     /// Add a package/release.
     Add(Add),
     /// Remove a package.
+    #[clap(alias = "rm")]
     Remove(Remove),
     /// List installed packages.
+    #[clap(alias = "ls")]
     List(List),
     /// Update packages to the latest version available from GitHub.
+    #[clap(alias = "up")]
     Update(Update),
     /// Generate shell completions to stdout.
     Completions {
