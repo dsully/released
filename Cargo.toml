@@ -32,10 +32,20 @@ clap = { version = "4.4", default-features = false, features = [
 ] }
 clap-verbosity-flag = "2.0"
 clap_complete = "4.4"
-compress-tools = "0.14.3"
 config = { version = "0.13.3", default-features = false, features = [ "toml" ] }
 console = "0.15.7"
 ctrlc = { version = "3.4.1", features = [ "termination" ] }
+decompress = { version = "0.6", default-features = false, features = [
+    # rar doesn't compile on Arm macOS right now.
+    "ar",
+    "bz2",
+    "gz",
+    "tarbz",
+    "targz",
+    "tarxz",
+    "tarzst",
+    "zip",
+] }
 futures = "0.3.28"
 indicatif = "0.17"
 infer = "0.15.0"

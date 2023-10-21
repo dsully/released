@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use compress_tools::*;
+use decompress::{decompress, ExtractOptsBuilder};
 use futures::stream::StreamExt;
 use octocrab::models::repos::{Asset, Release};
 use regex::Regex;
@@ -24,7 +24,7 @@ use crate::{
     version::{parse_version, Version},
 };
 
-pub async fn download(url: &Url, directory: &PathBuf) -> Result<PathBuf> {
+pub async fn download(url: &Url, directory: &'_ Path) -> Result<PathBuf> {
     // TODO: Add better error handling.
 
     let filename = url
@@ -184,9 +184,6 @@ pub async fn install_release(config: &mut Config, package: &'_ Package, system: 
     let owner = split_org_repo[0];
     let repo = split_org_repo[1];
 
-    let xdg_dir = xdg::BaseDirectories::with_prefix("released").context("Failed get XDG directory")?;
-
-    let cache_path = xdg_dir.get_cache_home();
     let bin_path = crate::config::bin_path()?;
 
     let version = match version {
@@ -219,9 +216,10 @@ pub async fn install_release(config: &mut Config, package: &'_ Package, system: 
         }
     };
 
-    let temp_path = tempdir().context("Unable to create temporary directory")?.into_path();
+    let temp_dir = tempdir().context("Unable to create temporary directory")?;
+    let temp_path = temp_dir.path();
 
-    match download(&asset.browser_download_url, &temp_path).await {
+    match download(&asset.browser_download_url, temp_path).await {
         Ok(asset_path) => {
             info!("Completed downloading {}", asset.browser_download_url);
             info!("Path: {}", asset_path.display());
@@ -230,10 +228,7 @@ pub async fn install_release(config: &mut Config, package: &'_ Package, system: 
 
             match infer::get_from_path(&asset_path) {
                 Ok(Some(ft)) if ft.matcher_type() == infer::MatcherType::Archive => {
-                    //
-                    let source = fs::File::open(&asset_path).context("Unable to open downloaded file")?;
-
-                    uncompress_archive(&source, &cache_path, Ownership::Preserve).context("Unable to unarchive file")?;
+                    decompress(&asset_path, &temp_path.into(), &ExtractOptsBuilder::default().build()?).context("Unable to unarchive file")?;
 
                     info!("Successfully extracted '{}'.", asset_path.display());
                 }
@@ -299,12 +294,18 @@ pub async fn install_release(config: &mut Config, package: &'_ Package, system: 
 
             config.save()?;
 
+            drop(temp_dir);
+
             Ok(())
         }
-        Err(_) => Err(CommandError::AssetDownloadError {
-            asset_uri: asset.browser_download_url,
-            asset_name: asset.name,
+        Err(_) => {
+            drop(temp_dir);
+
+            Err(CommandError::AssetDownloadError {
+                asset_uri: asset.browser_download_url,
+                asset_name: asset.name,
+            }
+            .into())
         }
-        .into()),
     }
 }

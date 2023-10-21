@@ -1,4 +1,19 @@
-default: build
+default: build test
 
 build:
-    @PKG_CONFIG_PATH=$HOMEBREW_PREFIX/opt/libarchive/lib/pkgconfig cargo build
+    @cargo build --all
+
+check:
+    @cargo check --all
+
+format:
+    @cargo fmt --all
+
+format-check:
+    @cargo fmt --all -- --check
+
+lint:
+    @cargo clippy --all -- -D clippy::dbg-macro -D warnings
+
+test:
+    @cargo test --all
