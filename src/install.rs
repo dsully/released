@@ -261,7 +261,7 @@ pub async fn install_release(config: &mut Config, package: &'_ Package, system: 
             let source = if is_standalone {
                 asset_path
             } else {
-                match find_binary(&cache_path, &binary_file_name) {
+                match find_binary(temp_path, &binary_file_name) {
                     Some(bin_file) => bin_file.into_path(),
                     None => return Err(CommandError::UnableToFindBinaryError { binary_file_name }.into()),
                 }
