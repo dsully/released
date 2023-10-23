@@ -66,6 +66,26 @@ jobs:
           tar --create --gzip --file=${{ env.archive_name }} --directory=./target/${{ matrix.target }}/release/ ${{ github.event.repository.name }}
           shasum -a 256 ${{ env.archive_name }} > ${{ env.archive_name }}.sha256
 
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.target }}
+          path: ${{ env.archive_name }}*
+
+  github:
+    name: Publish releases
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v3
+      - name: Publish binaries
+        run: |
+          gh release upload ${{ github.ref_name }} $(find . -iname *.tar.gz)
+          gh release upload ${{ github.ref_name }} $(find . -iname *.sha256)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       # - name: Create draft release
       #   uses: softprops/action-gh-release@v1
       #   id: release
@@ -75,9 +95,13 @@ jobs:
       #       ${{ env.archive_name }}.sha256
       #     draft: true
 
-      - name: Release my project to my Homebrew tap
+  homebrew:
+    name: Release on Homebrew
+    runs-on: ubuntu-latest
+    needs: [build, github]
+    steps:
+      - name: Release to Homebrew tap
         uses: Justintime50/homebrew-releaser@v1
-        if: success() && startsWith(github.ref, 'refs/tags/')
         with:
           homebrew_owner: dsully
           homebrew_tap: homebrew-tap
