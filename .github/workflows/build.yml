@@ -70,7 +70,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.target }}
-          path: ${{ env.archive_name }}*
+          path: ${{ env.archive_name }}
 
   github:
     name: Publish releases
@@ -81,8 +81,8 @@ jobs:
       - uses: actions/download-artifact@v3
       - name: Publish binaries
         run: |
-          gh release upload ${{ github.ref_name }} $(find . -iname *.tar.gz)
-          gh release upload ${{ github.ref_name }} $(find . -iname *.sha256)
+          gh release upload ${{ github.ref_name }} ${{ env.archive_name }}
+          # gh release upload ${{ github.ref_name }} $(find . -iname *.sha256)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
