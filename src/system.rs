@@ -29,6 +29,7 @@ impl Default for System {
 }
 
 impl System {
+    #[allow(dead_code)]
     pub fn is_match(&self, s: &'_ str) -> bool {
         self.is_os_match(s) && (self.is_arch_match(s) || self.is_universal_match(s))
     }
@@ -49,6 +50,7 @@ impl System {
         arch_regex.is_match(s)
     }
 
+    #[allow(dead_code)]
     pub fn is_universal_match(&self, s: &'_ str) -> bool {
         debug!("macOS Univeral trying to match: {}", s);
 
