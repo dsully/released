@@ -1,0 +1,104 @@
+---
+name: Release
+
+permissions:
+  contents: write
+
+on:
+  push:
+    tags:
+      - '**[0-9]+.[0-9]+.[0-9]+*'
+  pull_request:
+
+env:
+  CARGO_NET_RETRY: 10
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+  RUST_BACKTRACE: 1
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - name: Apple Silicon
+            target: aarch64-apple-darwin
+            arch: arm64
+            host: macos-latest
+            os: darwin
+          - name: Linux x86_64
+            target: x86_64-unknown-linux-gnu
+            arch: amd64
+            host: ubuntu-latest
+            os: linux
+
+    runs-on: ${{ matrix.host }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+          targets: ${{ matrix.target }}
+          toolchain: stable
+
+      - uses: swatinem/rust-cache@v2
+      - uses: extractions/setup-just@v1
+
+      - name: Build
+        id: build
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Build archive name
+        id: archive_name
+        run: |
+          version=${{ github.ref_name }}
+          # [REPO_NAME]-[VERSION]-[OPERATING_SYSTEM]-[ARCHITECTURE].tar.gz
+          archive_name=${{ github.event.repository.name }}-${version#v}-${{ matrix.os }}-${{ matrix.arch }}.tar.gz
+          echo "archive_name=${archive_name}" >> $GITHUB_ENV
+
+      - name: Archive release
+        id: archive
+        run: |
+          tar --create --gzip --file=${{ env.archive_name }} --directory=./target/${{ matrix.target }}/release/ ${{ github.event.repository.name }}
+          shasum -a 256 ${{ env.archive_name }} > ${{ env.archive_name }}.sha256
+
+      # - name: Create draft release
+      #   uses: softprops/action-gh-release@v1
+      #   id: release
+      #   with:
+      #     files: |
+      #       ${{ env.archive_name }}
+      #       ${{ env.archive_name }}.sha256
+      #     draft: true
+
+      - name: Release my project to my Homebrew tap
+        uses: Justintime50/homebrew-releaser@v1
+        if: success() && startsWith(github.ref, 'refs/tags/')
+        with:
+          homebrew_owner: dsully
+          homebrew_tap: homebrew-tap
+          formula_folder: Formula
+
+          commit_owner: Dan Sully
+          commit_email: dan+github@sully.org
+
+          github_token: ${{ secrets.HOMEBREW_GITHUB_TOKEN }}
+
+          install: |
+            bin.install "released"
+
+          test: |
+            system "released -h"
+
+          target_darwin_amd64: false
+          target_darwin_arm64: true
+          target_linux_amd64: true
+          target_linux_arm64: false
+
+          update_readme_table: true
+
+          debug: true
