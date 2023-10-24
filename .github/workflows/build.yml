@@ -68,14 +68,13 @@ jobs:
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
+        id: upload
         with:
-          name: ${{ env.target }}
-          path: |
-            ${{ env.archive_name }}
-            ${{ env.archive_name }}.sha256
+          name: ${{ matrix.target }}
+          path: ${{ env.archive_name }}
 
   github:
-    name: Publish releases
+    name: Release on GitHub
     needs: [build]
     runs-on: ubuntu-latest
     steps:
