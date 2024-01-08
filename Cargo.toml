@@ -5,7 +5,7 @@ edition = "2021"
 license = "MIT"
 name = "released"
 repository = "https://github.com/dsully/released"
-version = "0.0.2"
+version = "0.0.3"
 
 [[bin]]
 name = "released"
@@ -46,7 +46,11 @@ infer = "0.15.0"
 octocrab = "0.32"
 pluralizer = "0.4.0"
 regex = "1.10"
-reqwest = { version = "0.11", features = [ "stream" ] }
+reqwest = { version = "0.11", default-features = false, features = [
+    "json",
+    "stream",
+    "rustls-tls",
+] }
 semver = "1.0"
 serde = { version = "1.0", features = [ "derive" ] }
 serde_derive = "1.0"
@@ -84,7 +88,7 @@ installers = ["homebrew"]
 # A GitHub repo to push Homebrew formulas to
 tap = "dsully/homebrew-tap"
 # Target platforms to build apps for (Rust target-triple syntax)
-targets = ["x86_64-unknown-linux-gnu", "aarch64-apple-darwin"]
+targets = ["x86_64-unknown-linux-musl", "aarch64-apple-darwin"]
 # Publish jobs to run in CI
 publish-jobs = ["homebrew"]
 # Publish jobs to run in CI
