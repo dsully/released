@@ -2,11 +2,7 @@ use async_trait::async_trait;
 use clap::Args;
 use serde::Serialize;
 use tabled::{
-    settings::{
-        object::Columns,
-        style::{HorizontalLine, Style},
-        Color, Modify,
-    },
+    settings::{object::Columns, style::Style, Color, Modify},
     Table, Tabled,
 };
 
@@ -63,14 +59,7 @@ impl RunCommand for List {
 }
 
 fn create_table(data: &[Installed]) -> Table {
-    let theme = Style::modern()
-        .remove_top()
-        .remove_bottom()
-        .remove_horizontal()
-        // NB: order matters, must be after .remove_horizontal.
-        .horizontals([HorizontalLine::new(1, Style::modern().get_horizontal())])
-        .remove_left()
-        .remove_right();
+    let theme = Style::modern().remove_top().remove_bottom().remove_left().remove_right();
 
     let mut table = Table::builder(data).build();
 

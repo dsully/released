@@ -22,7 +22,7 @@ lto = "thin"
 
 [dependencies]
 anyhow = { version = "1.0", features = [ "backtrace" ] }
-async-trait = "0.1.74"
+async-trait = "0.1.77"
 clap = { version = "4.4", default-features = false, features = [
     "cargo",
     "color",
@@ -30,26 +30,16 @@ clap = { version = "4.4", default-features = false, features = [
     "suggestions",
     "wrap_help",
 ] }
-clap-verbosity-flag = "2.0"
+clap-verbosity-flag = "2.1"
 clap_complete = "4.4"
-config = { version = "0.13.3", default-features = false, features = [ "toml" ] }
+config = { version = "0.13.4", default-features = false, features = [ "toml" ] }
 console = "0.15.7"
-ctrlc = { version = "3.4.1", features = [ "termination" ] }
-decompress = { version = "0.6", default-features = false, features = [
-    # rar doesn't compile on Arm macOS right now.
-    "ar",
-    "bz2",
-    "gz",
-    "tarbz",
-    "targz",
-    "tarxz",
-    "tarzst",
-    "zip",
-] }
-futures = "0.3.28"
+ctrlc = { version = "3.4.2", features = [ "termination" ] }
+decompress = "0.6"
+futures = "0.3.30"
 indicatif = "0.17"
 infer = "0.15.0"
-octocrab = "0.31"
+octocrab = "0.32"
 pluralizer = "0.4.0"
 regex = "1.10"
 reqwest = { version = "0.11", features = [ "stream" ] }
@@ -57,13 +47,13 @@ semver = "1.0"
 serde = { version = "1.0", features = [ "derive" ] }
 serde_derive = "1.0"
 serde_json = "1.0"
-shadow-rs = { version = "0.24", default-features = false }
+shadow-rs = { version = "0.26", default-features = false }
 skim = "0.10"
 strfmt = "0.2.4"
-tabled = { version = "0.14", features = [ "std" ] }
-tempfile = "3.8.0"
+tabled = { version = "0.15", default-features = false, features = [ "derive", "std" ] }
+tempfile = "3.9.0"
 thiserror = "1.0"
-tokio = { version = "1.33.0", features = [
+tokio = { version = "1.35.1", features = [
     "fs",
     "macros",
     "net",
@@ -77,16 +67,16 @@ walkdir = "2.4"
 xdg = "2.5.2"
 
 [build-dependencies]
-shadow-rs = { version = "0.24", default-features = false }
+shadow-rs = { version = "0.26", default-features = false }
 
 # Config for 'cargo dist'
 [workspace.metadata.dist]
 # The preferred cargo-dist version to use in CI (Cargo.toml SemVer syntax)
-cargo-dist-version = "0.3.1"
+cargo-dist-version = "0.7.1"
 # CI backends to support
 ci = ["github"]
 # The installers to generate for each app
-installers = []
+installers = ["homebrew"]
 # A GitHub repo to push Homebrew formulas to
 tap = "dsully/homebrew-tap"
 # Target platforms to build apps for (Rust target-triple syntax)
