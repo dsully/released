@@ -80,7 +80,7 @@ cargo-dist-version = "0.7.1"
 # CI back-ends to support
 ci = ["github"]
 # The installers to generate for each app
-installers = []
+installers = ["homebrew"]
 # A GitHub repo to push Homebrew formulas to
 tap = "dsully/homebrew-tap"
 # Target platforms to build apps for (Rust target-triple syntax)
