@@ -5,7 +5,7 @@ edition = "2021"
 license = "MIT"
 name = "released"
 repository = "https://github.com/dsully/released"
-version = "0.0.1"
+version = "0.0.2"
 
 [[bin]]
 name = "released"
