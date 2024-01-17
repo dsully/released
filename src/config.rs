@@ -45,7 +45,11 @@ pub struct Config {
 pub struct Package {
     pub name: String,
     pub alias: String,
+
+    // #[serde(skip_serializing_if = "Option::is_none")]
     pub asset_pattern: String,
+
+    // #[serde(skip_serializing_if = "Option::is_none")]
     pub file_pattern: String,
 }
 

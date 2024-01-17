@@ -7,7 +7,7 @@ pub fn spinner() -> ProgressBar {
     pb.enable_steady_tick(Duration::from_millis(50));
 
     pb.set_style(
-        ProgressStyle::with_template("{spinner:.cyan.bold} {msg}")
+        ProgressStyle::with_template("{msg} {spinner:.cyan.bold}")
             .unwrap()
             .tick_chars("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏ "),
     );

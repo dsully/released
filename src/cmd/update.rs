@@ -41,7 +41,7 @@ impl RunCommand for Update {
 
             let s = spinner();
 
-            s.set_message(format!("  Checking {} ...", name));
+            s.set_message(format!("⊙ Checking {} ...", name));
 
             match install::install_release(&mut config, package, &system, None, false).await {
                 Ok(_) => s.finish_with_message(format!("{} {} updated", style("󰄴").green(), &name)),
