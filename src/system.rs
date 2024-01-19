@@ -52,9 +52,9 @@ impl System {
 
     #[allow(dead_code)]
     pub fn is_universal_match(&self, s: &'_ str) -> bool {
-        debug!("macOS Univeral trying to match: {}", s);
+        debug!("macOS Universal trying to match: {}", s);
 
-        Regex::new(r#"(?i).*univeral"#).expect("Unable to create regex for macOS Universal").is_match(s)
+        Regex::new(r#"(?i).*universal"#).expect("Unable to create regex for macOS Universal").is_match(s)
     }
 }
 
@@ -76,8 +76,8 @@ impl Display for OperatingSystem {
 impl OperatingSystem {
     pub fn get_match_regex(&self) -> Regex {
         match self {
-            Self::Linux => Regex::new(r#"(?i).*linux.*"#).expect("Unable to create regex for Linux"),
-            Self::Darwin => Regex::new(r#"(?i).*mac|macos|darwin"#).expect("Unable to create regex for macOS"),
+            Self::Linux => Regex::new(r#"(linux|unknown-linux-gnu)"#).expect("Unable to create regex for Linux"),
+            Self::Darwin => Regex::new(r#"(mac|macos|darwin)"#).expect("Unable to create regex for macOS"),
         }
     }
 }
@@ -100,8 +100,8 @@ impl Display for PlatformArchitecture {
 impl PlatformArchitecture {
     pub fn get_match_regex(&self) -> Regex {
         match self {
-            Self::Amd64 => Regex::new(r#"(?i).*amd64|x86_64.*"#).expect("Unable to create regex for amd64"),
-            Self::Arm64 => Regex::new(r#"(?i).*arm64|aarch64.*"#).expect("Unable to create regex for arm64"),
+            Self::Amd64 => Regex::new(r#"(amd64|x86_64)"#).expect("Unable to create regex for amd64"),
+            Self::Arm64 => Regex::new(r#"(arm64|aarch64)"#).expect("Unable to create regex for arm64"),
         }
     }
 }

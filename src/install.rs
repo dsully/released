@@ -19,7 +19,6 @@ use walkdir::{DirEntry, WalkDir};
 use crate::{
     config::{Config, InstalledPackage, Package},
     errors::CommandError,
-    spinner::spinner,
     system::System,
     version::{parse_version, Version},
 };
@@ -44,9 +43,7 @@ pub async fn download(url: &Url, directory: &'_ Path) -> Result<PathBuf> {
 
     let mut file = tokio::fs::File::create(&destination).await?;
 
-    let s = spinner();
-
-    s.set_message(format!("Downloading {} ...", &filename));
+    debug!("Downloading {} ...", &filename);
 
     let mut stream = reqwest::get(url.clone()).await?.error_for_status()?.bytes_stream();
 
@@ -54,8 +51,6 @@ pub async fn download(url: &Url, directory: &'_ Path) -> Result<PathBuf> {
         file.write_all_buf(&mut item.context("Unable to retrieve next chunk from download stream..")?)
             .await?;
     }
-
-    s.finish_with_message(format!("Downloaded {}", &filename));
 
     Ok(destination)
 }
@@ -276,7 +271,7 @@ pub async fn install_release(config: &mut Config, package: &'_ Package, system: 
             info!("Binary '{}'.", source.display());
             info!("Renaming to '{}' and setting executable.", destination.display());
 
-            fs::rename(&source, &destination).context(format!("Unable to move file to {}", bin_path.display()))?;
+            fs::copy(&source, &destination).context(format!("Unable to copy {} to {}", &source.display(), &destination.display()))?;
             fs::set_permissions(&destination, fs::Permissions::from_mode(0o755))?;
 
             if !config.installed.contains_key(&package.alias) {

@@ -12,6 +12,7 @@ use crate::{
     config::{Config, Package},
     errors::CommandError,
     install,
+    spinner::spinner,
     system::System,
     version::parse_version,
 };
@@ -120,7 +121,7 @@ impl RunCommand for Add {
                 .map(|items| items.selected_items.iter().map(|item| item.text().to_string()).collect())
                 .unwrap_or_default()
             } else {
-                match versions.get(0) {
+                match versions.first() {
                     Some(version) => version.into(),
                     None => return Err(CommandError::ReleaseNotFound(self.name.to_string())),
                 }
@@ -131,11 +132,16 @@ impl RunCommand for Add {
 
         let package = Package::new(org_repo, &alias, asset_pattern, file_pattern);
 
-        println!("Installing {} ...", &package.name);
+        let s = spinner();
+
+        s.set_message(format!("⊙ Installing {} ...", &package.name));
 
         match install::install_release(&mut packages, &package, &system, Some(parsed_version), self.show).await {
-            Ok(_) => println!("Installed {} successfully!", &package.name),
-            Err(e) => error!("{:?}", e),
+            Ok(_) => s.finish_with_message(format!("Installed {} successfully!", &package.name)),
+            Err(e) => {
+                s.finish();
+                error!("{:?}", e);
+            }
         }
 
         Ok(())

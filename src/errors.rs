@@ -16,7 +16,7 @@ pub enum CommandError {
     #[error("Already up to date.")]
     NoUpdateNeeded,
 
-    #[error("The config list does not contain any packages!")]
+    #[error("There aren't any packages installed!")]
     EmptyPackages,
 
     #[error("Unable to find release for {0}")]
