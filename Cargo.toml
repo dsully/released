@@ -5,7 +5,7 @@ edition = "2021"
 license = "MIT"
 name = "released"
 repository = "https://github.com/dsully/released"
-version = "0.0.3"
+version = "0.0.5"
 
 [[bin]]
 name = "released"
@@ -80,7 +80,7 @@ shadow-rs = { version = "0.26", default-features = false }
 # Config for 'cargo dist'
 [workspace.metadata.dist]
 # The preferred cargo-dist version to use in CI (Cargo.toml SemVer syntax)
-cargo-dist-version = "0.7.1"
+cargo-dist-version = "0.8.1"
 # CI backends to support
 ci = ["github"]
 # The installers to generate for each app
@@ -88,10 +88,8 @@ installers = ["homebrew"]
 # A GitHub repo to push Homebrew formulas to
 tap = "dsully/homebrew-tap"
 # Target platforms to build apps for (Rust target-triple syntax)
-targets = ["x86_64-unknown-linux-gnu", "aarch64-apple-darwin"]
+targets = ["aarch64-apple-darwin", "x86_64-unknown-linux-gnu"]
 # Publish jobs to run in CI
 publish-jobs = ["homebrew"]
 # Publish jobs to run in CI
 pr-run-mode = "plan"
-# Skip checking whether the specified configuration files are up to date
-allow-dirty = ["ci"]
