@@ -12,12 +12,8 @@ name = "released"
 path = "src/main.rs"
 
 [profile.release]
-incremental = true
 lto = true
 opt-level = 3
-
-[profile.dev]
-incremental = true
 
 # The profile that 'cargo dist' will build with
 [profile.dist]
