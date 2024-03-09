@@ -1,6 +1,6 @@
 [package]
 name = "released"
-version = "0.0.5"
+version = "0.0.6"
 categories = ["command-line-utilities"]
 edition = "2021"
 license = "MIT"
@@ -21,46 +21,46 @@ inherits = "release"
 lto = "thin"
 
 [dependencies]
-anyhow = { version = "1.0", features = ["backtrace"] }
+anyhow = { version = "1.0.80", features = ["backtrace"] }
 async-trait = "0.1.77"
-clap = { version = "4.5", default-features = false, features = ["cargo", "color", "derive", "suggestions", "wrap_help"] }
-clap-verbosity-flag = "2.2"
-clap_complete = "4.5"
+clap = { version = "4.5.2", default-features = false, features = ["cargo", "color", "derive", "suggestions", "wrap_help"] }
+clap-verbosity-flag = "2.2.0"
+clap_complete = "4.5.1"
 config = { version = "0.14.0", default-features = false, features = ["toml"] }
 console = "0.15.8"
 ctrlc = { version = "3.4.2", features = ["termination"] }
-decompress = "0.6"
+decompress = "0.6.0"
 futures = "0.3.30"
-indicatif = "0.17"
+indicatif = "0.17.8"
 infer = "0.15.0"
-octocrab = "0.34"
+octocrab = "0.34.3"
 pluralizer = "0.4.0"
-regex = "1.10"
-reqwest = { version = "0.11", default-features = false, features = ["json", "stream", "rustls-tls"] }
-semver = "1.0"
-serde = { version = "1.0", features = ["derive"] }
-serde_derive = "1.0"
-serde_json = "1.0"
-shadow-rs = { version = "0.27", default-features = false }
-skim = "0.10"
+regex = "1.10.3"
+reqwest = { version = "0.11.25", default-features = false, features = ["json", "stream", "rustls-tls"] }
+semver = "1.0.22"
+serde = { version = "1.0.197", features = ["derive"] }
+serde_derive = "1.0.197"
+serde_json = "1.0.114"
+shadow-rs = { version = "0.27.0", default-features = false }
+skim = "0.10.4"
 strfmt = "0.2.4"
-tabled = { version = "0.15", default-features = false, features = ["derive", "std"] }
+tabled = { version = "0.15.0", default-features = false, features = ["derive", "std"] }
 tempfile = "3.10.1"
-thiserror = "1.0"
+thiserror = "1.0.57"
 tokio = { version = "1.36.0", features = ["fs", "macros", "net", "rt", "rt-multi-thread"] }
-toml = { version = "0.8", features = ["preserve_order"] }
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-walkdir = "2.5"
+toml = { version = "0.8.10", features = ["preserve_order"] }
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+walkdir = "2.5.0"
 xdg = "2.5.2"
 
 [build-dependencies]
-shadow-rs = { version = "0.27", default-features = false }
+shadow-rs = { version = "0.27.0", default-features = false }
 
 # Config for 'cargo dist'
 [workspace.metadata.dist]
 # The preferred cargo-dist version to use in CI (Cargo.toml SemVer syntax)
-cargo-dist-version = "0.9.0"
+cargo-dist-version = "0.11.1"
 # CI backends to support
 ci = ["github"]
 # The installers to generate for each app
