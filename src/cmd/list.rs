@@ -39,7 +39,16 @@ impl RunCommand for List {
         let mut lines = Vec::with_capacity(config.installed.len());
 
         for (name, installed) in config.installed.iter() {
-            let package = config.packages.get(&installed.name).unwrap();
+
+            let package = match config.packages.get(&installed.name) {
+                Some(package) => package,
+                None => {println!(
+                    "Package {} not found in the package list.",
+                    &installed.name
+                );
+
+                continue
+            }};
 
             lines.push(Installed {
                 repository: format!("https://github.com/{}", &package.name),
