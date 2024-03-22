@@ -1,11 +1,11 @@
 [package]
-name = "released"
-version = "0.0.9"
-categories = ["command-line-utilities"]
+categories = [ "command-line-utilities" ]
+description = "Install and manage dev tools."
 edition = "2021"
 license = "MIT"
+name = "released"
 repository = "https://github.com/dsully/released"
-description = "Install and manage dev tools."
+version = "0.0.9"
 
 [[bin]]
 name = "released"
@@ -17,48 +17,79 @@ opt-level = 3
 
 # The profile that 'cargo dist' will build with
 [profile.dist]
+codegen-units = 1
+debug = false
 inherits = "release"
 lto = true
-codegen-units = 1
-panic = "abort"
 opt-level = 3
-debug = false
+panic = "abort"
 strip = true
 
 [profile.dev]
 debug = 0
 
 [dependencies]
-anyhow = { version = "1.0.81", features = ["backtrace"] }
-async-trait = "0.1.77"
-clap = { version = "4.5.2", default-features = false, features = ["cargo", "color", "derive", "suggestions", "wrap_help"] }
+anyhow = { version = "1.0.81", features = [ "backtrace" ] }
+async-trait = "0.1.78"
+clap = { version = "4.5.3", default-features = false, features = [
+  "cargo",
+  "color",
+  "derive",
+  "suggestions",
+  "wrap_help",
+] }
 clap-verbosity-flag = "2.2.0"
 clap_complete = "4.5.1"
-config = { version = "0.14.0", default-features = false, features = ["toml"] }
+config = { version = "0.14.0", default-features = false, features = [ "toml" ] }
 console = "0.15.8"
-ctrlc = { version = "3.4.4", features = ["termination"] }
-decompress = { git = "https://github.com/dsully/decompress", default-features = false, features = ["tarball", "tarxz", "targz", "tarbz", "tarzst", "zip", "ar", "gz", "bz2", "xz", "zstd"] }
+ctrlc = { version = "3.4.4", features = [ "termination" ] }
+decompress = { git = "https://github.com/dsully/decompress", default-features = false, features = [
+  "tarball",
+  "tarxz",
+  "targz",
+  "tarbz",
+  "tarzst",
+  "zip",
+  "ar",
+  "gz",
+  "bz2",
+  "xz",
+  "zstd",
+] }
 futures = "0.3.30"
 indicatif = "0.17.8"
 infer = "0.15.0"
-octocrab = "0.35.0"
+octocrab = "0.36.0"
 pluralizer = "0.4.0"
 regex = "1.10.3"
-reqwest = { version = "0.11.26", default-features = false, features = ["json", "stream", "rustls-tls"] }
+reqwest = { version = "0.12.0", default-features = false, features = [
+  "json",
+  "stream",
+  "rustls-tls",
+] }
 semver = "1.0.22"
-serde = { version = "1.0.197", features = ["derive"] }
+serde = { version = "1.0.197", features = [ "derive" ] }
 serde_derive = "1.0.197"
 serde_json = "1.0.114"
 shadow-rs = { version = "0.27.1", default-features = false }
 skim = "0.10.4"
 strfmt = "0.2.4"
-tabled = { version = "0.15.0", default-features = false, features = ["derive", "std"] }
+tabled = { version = "0.15.0", default-features = false, features = [
+  "derive",
+  "std",
+] }
 tempfile = "3.10.1"
 thiserror = "1.0.58"
-tokio = { version = "1.36.0", features = ["fs", "macros", "net", "rt", "rt-multi-thread"] }
-toml = { version = "0.8.11", features = ["preserve_order"] }
+tokio = { version = "1.36.0", features = [
+  "fs",
+  "macros",
+  "net",
+  "rt",
+  "rt-multi-thread",
+] }
+toml = { version = "0.8.12", features = [ "preserve_order" ] }
 tracing = "0.1.40"
-tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.18", features = [ "env-filter" ] }
 walkdir = "2.5.0"
 xdg = "2.5.2"
 
@@ -82,6 +113,6 @@ publish-jobs = ["homebrew"]
 # Publish jobs to run in CI
 pr-run-mode = "plan"
 
-# Use Apple Silicon runners.
-[workspace.metadata.dist.github-custom-runners]
-aarch64-apple-darwin = "macos-14"
+  # Use Apple Silicon runners.
+  [workspace.metadata.dist.github-custom-runners]
+  aarch64-apple-darwin = "macos-14"

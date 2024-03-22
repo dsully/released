@@ -82,7 +82,7 @@ async fn main() -> Result<()> {
 
     if let Some(env_api_token) = std::env::var_os("GITHUB_TOKEN") {
         info!("Initializing the GitHub client with token from environment");
-        octocrab::initialise(octocrab::Octocrab::builder().personal_token(env_api_token.to_str().unwrap().into()).build()?);
+        octocrab::initialise(octocrab::Octocrab::builder().personal_token(env_api_token.into_string().unwrap()).build()?);
     };
 
     match cli.command {
