@@ -65,12 +65,12 @@ async fn repository_releases(owner: &'_ str, repository: &'_ str, pre_release: b
         .await?
         .items
         .iter()
-        .filter_map(|release| match pre_release {
-            true => Some(release.tag_name.to_string()),
-            false => match release.prerelease {
-                true => None,
-                false => Some(release.tag_name.to_string()),
-            },
+        .filter_map(|release| {
+            if pre_release && release.prerelease {
+                None
+            } else {
+                Some(release.tag_name.to_string())
+            }
         })
         .collect())
 }
@@ -91,8 +91,8 @@ impl RunCommand for Add {
         let alias = self.alias.unwrap_or_else(|| repository.to_string());
 
         let patterns = Patterns {
-            asset: self.asset_pattern.to_owned(),
-            file: self.file_filter.to_owned(),
+            asset: self.asset_pattern,
+            file: self.file_filter,
         };
 
         let asset_pattern = &patterns.asset.unwrap_or_default();
@@ -115,7 +115,7 @@ impl RunCommand for Add {
                         .multi(true)
                         .reverse(true)
                         .build()
-                        .unwrap(),
+                        .expect("Unable to build SkimOptionsBuilder"),
                     Some(reader),
                 )
                 .map(|items| items.selected_items.iter().map(|item| item.text().to_string()).collect())
@@ -137,7 +137,7 @@ impl RunCommand for Add {
         s.set_message(format!("⊙ Installing {} ...", &package.name));
 
         match install::install_release(&mut packages, &package, &system, Some(parsed_version), self.show).await {
-            Ok(_) => s.finish_with_message(format!("Installed {} successfully!", &package.name)),
+            Ok(()) => s.finish_with_message(format!("Installed {} successfully!", &package.name)),
             Err(e) => {
                 s.finish();
                 error!("{:?}", e);

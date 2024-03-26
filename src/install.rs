@@ -31,7 +31,7 @@ pub async fn download(url: &Url, directory: &'_ Path) -> Result<PathBuf> {
         .ok_or_else(|| CommandError::InvalidUrl(url.to_string()))?
         .rev()
         .find(|segment| !segment.is_empty())
-        .unwrap();
+        .expect("No non-empty segments found in URL path");
 
     let destination = directory.join(filename);
 
@@ -89,6 +89,7 @@ pub async fn latest_release_tag(owner: &'_ str, repo: &'_ str) -> Option<Version
 pub fn platform_asset(release: &'_ Release, system: &'_ System, user_pattern: &'_ str, _show: bool) -> Option<Asset> {
     //
     // First pass, remove all assets that are not for the current platform.
+    #[allow(clippy::case_sensitive_file_extension_comparisons)]
     let mut platform_assets: Vec<Asset> = release
         .assets
         .iter()
@@ -107,22 +108,21 @@ pub fn platform_asset(release: &'_ Release, system: &'_ System, user_pattern: &'
     // If the regex contains the OS or architecture placeholders, insert them into the pattern.
     //
     // Otherwise, match against the OS of the current system.
-    platform_assets = match user_pattern.is_empty() {
-        true => platform_assets.iter().filter(|asset| system.is_os_match(&asset.name)).cloned().collect(),
-        false => {
-            let s = HashMap::from([
-                ("os".to_string(), system.os.get_match_regex().to_string()),
-                ("arch".to_string(), system.architecture.get_match_regex().to_string()),
-            ]);
+    platform_assets = if user_pattern.is_empty() {
+        platform_assets.iter().filter(|asset| system.is_os_match(&asset.name)).cloned().collect()
+    } else {
+        let s = HashMap::from([
+            ("os".to_string(), system.os.get_match_regex().to_string()),
+            ("arch".to_string(), system.architecture.get_match_regex().to_string()),
+        ]);
 
-            let pattern = strfmt(user_pattern, &s).unwrap();
+        let pattern = strfmt(user_pattern, &s).expect("Invalid pattern");
 
-            debug!("Matching against pattern: {}", pattern);
+        debug!("Matching against pattern: {}", pattern);
 
-            let r = Regex::new(&pattern).unwrap_or_else(|_| panic!("{} is not a valid Regular Expression", &pattern));
+        let r = Regex::new(&pattern).unwrap_or_else(|_| panic!("{} is not a valid Regular Expression", &pattern));
 
-            platform_assets.iter().filter(|asset| r.is_match(&asset.name)).cloned().collect()
-        }
+        platform_assets.iter().filter(|asset| r.is_match(&asset.name)).cloned().collect()
     };
 
     // TODO: Handle macOS / Universal case.
@@ -147,17 +147,23 @@ pub fn platform_asset(release: &'_ Release, system: &'_ System, user_pattern: &'
                     .color(Some(crate::config::skim_colors()))
                     .height(Some("25%"))
                     .build()
-                    .unwrap(),
+                    .expect("Unable to build SkimOptionsBuilder"),
                 Some(reader),
             )
             .map(|items| {
                 items
                     .selected_items
                     .iter()
-                    .map(|item| platform_assets.clone().into_iter().find(|asset| asset.name == item.text()).unwrap())
+                    .map(|item| {
+                        platform_assets
+                            .clone()
+                            .into_iter()
+                            .find(|asset| asset.name == item.text())
+                            .expect("Unable to find selected item")
+                    })
                     .collect()
             })
-            .unwrap();
+            .expect("Unable to run Skim");
 
             Some(selected_item[0].clone())
         }
@@ -174,10 +180,7 @@ fn find_binary(folder: &'_ Path, bin_name: &'_ str) -> Option<DirEntry> {
 }
 
 pub async fn install_release(config: &mut Config, package: &'_ Package, system: &'_ System, version: Option<Version>, show: bool) -> Result<()> {
-    let split_org_repo: Vec<&str> = package.name.split('/').collect();
-
-    let owner = split_org_repo[0];
-    let repo = split_org_repo[1];
+    let (owner, repo) = package.name.split_once('/').expect("Invalid package name");
 
     let bin_path = crate::config::bin_path()?;
 
@@ -185,7 +188,7 @@ pub async fn install_release(config: &mut Config, package: &'_ Package, system: 
         Some(v) => v,
         None => match latest_release_tag(owner, repo).await {
             Some(rel) => rel,
-            None => return Err(CommandError::ReleaseNotFound(package.name.to_owned()).into()),
+            None => return Err(CommandError::ReleaseNotFound(package.name.clone()).into()),
         },
     };
 
@@ -198,109 +201,103 @@ pub async fn install_release(config: &mut Config, package: &'_ Package, system: 
 
     let release = release_for_repository(owner, repo, &version).await?;
 
-    let asset = match platform_asset(&release, system, &package.asset_pattern, show) {
-        Some(asset) => asset,
-        None => {
-            return Err(CommandError::AssetNotFound {
-                package: package.name.to_string(),
-                version,
-                arch: system.architecture.clone(),
-                os: system.os.clone(),
-            }
-            .into())
+    let Some(asset) = platform_asset(&release, system, &package.asset_pattern, show) else {
+        return Err(CommandError::AssetNotFound {
+            package: package.name.to_string(),
+            version,
+            arch: system.architecture.clone(),
+            os: system.os.clone(),
         }
+        .into());
     };
 
     let temp_dir = tempdir().context("Unable to create temporary directory")?;
     let temp_path = temp_dir.path();
 
-    match download(&asset.browser_download_url, temp_path).await {
-        Ok(asset_path) => {
-            info!("Completed downloading {}", asset.browser_download_url);
-            info!("Path: {}", asset_path.display());
+    if let Ok(asset_path) = download(&asset.browser_download_url, temp_path).await {
+        info!("Completed downloading {}", asset.browser_download_url);
+        info!("Path: {asset_path:?}");
 
-            let mut is_standalone = false;
+        let mut is_standalone = false;
 
-            match infer::get_from_path(&asset_path) {
-                Ok(Some(ft)) if ft.matcher_type() == infer::MatcherType::Archive => {
-                    decompress(&asset_path, &temp_path.into(), &ExtractOptsBuilder::default().build()?).context("Unable to unarchive file")?;
+        match infer::get_from_path(&asset_path) {
+            Ok(Some(ft)) if ft.matcher_type() == infer::MatcherType::Archive => {
+                decompress(&asset_path, &temp_path.into(), &ExtractOptsBuilder::default().build()?).context("Unable to unarchive file")?;
 
-                    info!("Successfully extracted '{}'.", asset_path.display());
-                }
-                Ok(Some(ft)) if ft.matcher_type() == infer::MatcherType::App => is_standalone = true,
-                Ok(Some(ft)) if ft.mime_type() == "text/x-shellscript" => is_standalone = true,
-                Ok(Some(ft)) => {
-                    return Err(CommandError::InvalidFileTypeError {
-                        path: asset_path,
-                        ft: ft.mime_type().to_string(),
-                    }
-                    .into())
-                }
-                _ => {
-                    return Err(CommandError::InvalidFileTypeError {
-                        path: asset_path,
-                        ft: String::from("Unknown"),
-                    }
-                    .into())
-                }
+                info!("Successfully extracted '{asset_path:?}'.");
             }
-
-            let binary_file_name = if is_standalone {
-                asset_path.to_string_lossy().to_string()
-            } else if package.file_pattern.is_empty() {
-                package.alias.clone()
-            } else {
-                package.file_pattern.clone()
-            };
-
-            let source = if is_standalone {
-                asset_path
-            } else {
-                match find_binary(temp_path, &binary_file_name) {
-                    Some(bin_file) => bin_file.into_path(),
-                    None => return Err(CommandError::UnableToFindBinaryError { binary_file_name }.into()),
+            Ok(Some(ft)) if ft.matcher_type() == infer::MatcherType::App => is_standalone = true,
+            Ok(Some(ft)) if ft.mime_type() == "text/x-shellscript" => is_standalone = true,
+            Ok(Some(ft)) => {
+                return Err(CommandError::InvalidFileTypeError {
+                    path: asset_path,
+                    ft: ft.mime_type().to_string(),
                 }
-            };
-
-            let destination = if is_standalone {
-                bin_path.join(&package.alias)
-            } else {
-                bin_path.join(source.file_name().unwrap())
-            };
-
-            info!("Binary '{}'.", source.display());
-            info!("Renaming to '{}' and setting executable.", destination.display());
-
-            fs::copy(&source, &destination).context(format!("Unable to copy {} to {}", &source.display(), &destination.display()))?;
-            fs::set_permissions(&destination, fs::Permissions::from_mode(0o755))?;
-
-            if !config.installed.contains_key(&package.alias) {
-                config.packages.insert(package.name.to_owned(), package.to_owned());
+                .into())
             }
-
-            config.installed.insert(
-                package.alias.to_owned(),
-                InstalledPackage {
-                    name: package.name.to_owned(),
-                    version: version.as_tag().to_owned(),
-                    path: destination.to_owned(),
-                },
-            );
-
-            config.save()?;
-
-            drop(temp_dir);
-
-            Ok(())
+            _ => {
+                return Err(CommandError::InvalidFileTypeError {
+                    path: asset_path,
+                    ft: String::from("Unknown"),
+                }
+                .into())
+            }
         }
-        Err(_) => {
-            drop(temp_dir);
 
-            Err(CommandError::AssetDownloadError {
-                asset_uri: asset.browser_download_url,
-                asset_name: asset.name,
+        let binary_file_name = if is_standalone {
+            asset_path.to_string_lossy().to_string()
+        } else if package.file_pattern.is_empty() {
+            package.alias.clone()
+        } else {
+            package.file_pattern.clone()
+        };
+
+        let source = if is_standalone {
+            asset_path
+        } else {
+            match find_binary(temp_path, &binary_file_name) {
+                Some(bin_file) => bin_file.into_path(),
+                None => return Err(CommandError::UnableToFindBinaryError { binary_file_name }.into()),
             }
-            .into())
+        };
+
+        let destination = if is_standalone {
+            bin_path.join(&package.alias)
+        } else {
+            bin_path.join(source.file_name().expect("Unable to get file name"))
+        };
+
+        info!("Binary '{source:?}'.");
+        info!("Renaming to '{destination:?}' and setting executable.");
+
+        fs::copy(&source, &destination).context(format!("Unable to copy {source:?} to {destination:?}"))?;
+        fs::set_permissions(&destination, fs::Permissions::from_mode(0o755))?;
+
+        if !config.installed.contains_key(&package.alias) {
+            config.packages.insert(package.name.clone(), package.clone());
         }
+
+        config.installed.insert(
+            package.alias.clone(),
+            InstalledPackage {
+                name: package.name.clone(),
+                version: version.as_tag().clone(),
+                path: destination.clone(),
+            },
+        );
+
+        config.save()?;
+
+        drop(temp_dir);
+
+        Ok(())
+    } else {
+        drop(temp_dir);
+
+        Err(CommandError::AssetDownloadError {
+            asset_uri: asset.browser_download_url,
+            asset_name: asset.name,
+        }
+        .into())
     }
 }

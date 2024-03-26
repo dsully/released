@@ -8,7 +8,7 @@ pub fn spinner() -> ProgressBar {
 
     pb.set_style(
         ProgressStyle::with_template("{msg} {spinner:.cyan.bold}")
-            .unwrap()
+            .expect("Failed to set progress style.")
             .tick_chars("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏ "),
     );
 

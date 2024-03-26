@@ -31,7 +31,7 @@ impl RunCommand for Update {
 
         println!("Checking for package updates ...\n");
 
-        for (name, package) in config.packages.clone().iter() {
+        for (name, package) in &config.packages.clone() {
             //
             if self.only.as_ref().is_some_and(|o| name != o) {
                 continue;
@@ -41,10 +41,10 @@ impl RunCommand for Update {
 
             let s = spinner();
 
-            s.set_message(format!("⊙ Checking {} ...", name));
+            s.set_message(format!("⊙ Checking {name} ..."));
 
             match install::install_release(&mut config, package, &system, None, false).await {
-                Ok(_) => s.finish_with_message(format!("{} {} updated", style("󰄴").green(), &name)),
+                Ok(()) => s.finish_with_message(format!("{} {} updated", style("󰄴").green(), &name)),
                 Err(e) if e.to_string() == CommandError::NoUpdateNeeded.to_string() => {
                     s.finish_with_message(format!("{} {} is already up to date!", style("󰐾").blue(), &name));
                 }

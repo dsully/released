@@ -1,3 +1,6 @@
+#![deny(clippy::all, clippy::pedantic, clippy::unwrap_used)]
+#![allow(clippy::module_name_repetitions, clippy::missing_errors_doc, clippy::missing_panics_doc)]
+
 use anyhow::Result;
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{generate, Shell as CompletionShell};
@@ -80,9 +83,9 @@ async fn main() -> Result<()> {
         .with(tracing_subscriber::fmt::layer().with_filter(filter_fn(|metadata| metadata.target().starts_with(env!("CARGO_PKG_NAME")))))
         .init();
 
-    if let Some(env_api_token) = std::env::var_os("GITHUB_TOKEN") {
+    if let Ok(env_api_token) = std::env::var("GITHUB_TOKEN") {
         info!("Initializing the GitHub client with token from environment");
-        octocrab::initialise(octocrab::Octocrab::builder().personal_token(env_api_token.into_string().unwrap()).build()?);
+        octocrab::initialise(octocrab::Octocrab::builder().personal_token(env_api_token).build()?);
     };
 
     match cli.command {

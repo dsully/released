@@ -71,7 +71,7 @@ pub fn bin_path() -> Result<PathBuf> {
         fs::create_dir_all(&bin_path).context("Creating `~/.local/bin`")?;
     }
 
-    Ok(bin_path.to_path_buf())
+    Ok(bin_path.clone())
 }
 
 pub fn config_path() -> Result<PathBuf> {
@@ -105,28 +105,27 @@ impl Config {
         let config_file = config_path()?;
         let state_file = state_path()?;
 
-        let mut config: Config = match config_file.exists() {
-            true => {
-                debug!("Reading config file from {:?}", &config_file);
+        let mut config: Config = if config_file.exists() {
+            debug!("Reading config file from {:?}", &config_file);
 
-                let builder = config::Config::builder()
-                    .add_source(config::File::from(config_file.as_ref()))
-                    .build()
-                    .context("Failed to create Config builder.")?;
+            let builder = config::Config::builder()
+                .add_source(config::File::from(config_file.as_ref()))
+                .build()
+                .context("Failed to create Config builder.")?;
 
-                match builder.try_deserialize() {
-                    Ok(c) => c,
-                    Err(e) => {
-                        return Err(ConfigError::DeserializationError {
-                            file_path: config_file,
-                            format: "TOML".to_string(),
-                            msg: e.to_string(),
-                        }
-                        .into());
+            match builder.try_deserialize() {
+                Ok(c) => c,
+                Err(e) => {
+                    return Err(ConfigError::DeserializationError {
+                        file_path: config_file,
+                        format: "TOML".to_string(),
+                        msg: e.to_string(),
                     }
+                    .into());
                 }
             }
-            false => Config::default(),
+        } else {
+            Config::default()
         };
 
         config.installed = match fs::read_to_string(&state_file) {

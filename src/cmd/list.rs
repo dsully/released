@@ -38,23 +38,17 @@ impl RunCommand for List {
 
         let mut lines = Vec::with_capacity(config.installed.len());
 
-        for (name, installed) in config.installed.iter() {
-
-            let package = match config.packages.get(&installed.name) {
-                Some(package) => package,
-                None => {println!(
-                    "Package {} not found in the package list.",
-                    &installed.name
-                );
-
-                continue
-            }};
+        for (name, installed) in &config.installed {
+            let Some(package) = config.packages.get(&installed.name) else {
+                println!("Package {} not found in the package list.", &installed.name);
+                continue;
+            };
 
             lines.push(Installed {
                 repository: format!("https://github.com/{}", &package.name),
                 alias: name,
                 version: &installed.version,
-                path: installed.path.to_str().unwrap(),
+                path: installed.path.to_str().expect("Unable to convert path to string."),
             });
         }
 
