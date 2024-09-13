@@ -1,6 +1,5 @@
 use async_trait::async_trait;
 use clap::Args;
-use std::fs;
 use tracing::debug;
 
 use crate::{
@@ -26,7 +25,7 @@ impl RunCommand for Remove {
                 if installed.path.exists() {
                     debug!("Removing {:?}", &installed.path);
 
-                    if fs::remove_file(&installed.path).is_err() {
+                    if std::fs::remove_file(&installed.path).is_err() {
                         return Err(CommandError::FileDelete {
                             file_name: installed.path.clone(),
                         });

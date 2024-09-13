@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use clap::Args;
+use git_url_parse::GitUrl;
 use skim::{
     prelude::{SkimItemReader, SkimOptionsBuilder},
     Skim,
@@ -83,11 +84,18 @@ impl RunCommand for Add {
 
         let split_name: Vec<&str> = self.name.split('@').collect();
 
-        let org_repo = if split_name.len() > 1 { split_name[0] } else { &self.name };
-        let split_org_repo: Vec<&str> = org_repo.split('/').collect();
+        let urlish = if split_name.len() > 1 { split_name[0].to_string() } else { self.name.clone() };
 
-        let organization = split_org_repo[0];
-        let repository = split_org_repo[1];
+        let urlish = if urlish.contains("github.com") {
+            urlish
+        } else {
+            format!("https://github.com/{urlish}")
+        };
+
+        let url = GitUrl::parse(&urlish).expect("Couldn't parse as a GitHub URL!");
+
+        let organization = url.owner.expect("Couldn't find an organization!");
+        let repository = url.name;
         let alias = self.alias.unwrap_or_else(|| repository.to_string());
 
         let patterns = Patterns {
@@ -103,7 +111,7 @@ impl RunCommand for Add {
         let version: String = if split_name.len() > 1 {
             split_name[1].to_string()
         } else {
-            let versions = repository_releases(organization, repository, self.pre_release).await?;
+            let versions = repository_releases(&organization, &repository, self.pre_release).await?;
 
             if self.show {
                 let reader = SkimItemReader::default().of_bufread(Cursor::new(versions.join("\n")));
@@ -130,7 +138,7 @@ impl RunCommand for Add {
 
         let parsed_version = parse_version(&version);
 
-        let package = Package::new(org_repo, &alias, asset_pattern, file_pattern);
+        let package = Package::new(&urlish, &alias, asset_pattern, file_pattern);
 
         let s = spinner();
 
