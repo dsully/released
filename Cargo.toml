@@ -2,10 +2,11 @@
 categories = [ "command-line-utilities" ]
 description = "Install and manage dev tools."
 edition = "2021"
+homepage = "https://github.com/dsully/released"
 license = "MIT"
 name = "released"
 repository = "https://github.com/dsully/released"
-version = "0.0.9"
+version = "0.0.10"
 
 [[bin]]
 name = "released"
@@ -29,20 +30,20 @@ strip = true
 debug = 0
 
 [dependencies]
-anyhow = { version = "1.0.81", features = [ "backtrace" ] }
-async-trait = "0.1.79"
-clap = { version = "4.5.4", default-features = false, features = [
+anyhow = { version = "1.0.87", features = [ "backtrace" ] }
+async-trait = "0.1.82"
+clap = { version = "4.5.17", default-features = false, features = [
   "cargo",
   "color",
   "derive",
   "suggestions",
   "wrap_help",
 ] }
-clap-verbosity-flag = "2.2.0"
-clap_complete = "4.5.1"
+clap-verbosity-flag = "2.2.1"
+clap_complete = "4.5.26"
 config = { version = "0.14.0", default-features = false, features = [ "toml" ] }
 console = "0.15.8"
-ctrlc = { version = "3.4.4", features = [ "termination" ] }
+ctrlc = { version = "3.4.5", features = [ "termination" ] }
 decompress = { git = "https://github.com/dsully/decompress", default-features = false, features = [
   "tarball",
   "tarxz",
@@ -56,52 +57,53 @@ decompress = { git = "https://github.com/dsully/decompress", default-features = 
   "xz",
   "zstd",
 ] }
+etcetera = "0.8.0"
 futures = "0.3.30"
+git-url-parse = "0.4.5"
 indicatif = "0.17.8"
-infer = "0.15.0"
-octocrab = "0.38.0"
+infer = "0.16.0"
+octocrab = "0.39.0"
 pluralizer = "0.4.0"
-regex = "1.10.4"
-reqwest = { version = "0.12.3", default-features = false, features = [
+regex = "1.10.6"
+reqwest = { version = "0.12.7", default-features = false, features = [
   "json",
   "stream",
   "rustls-tls",
 ] }
-semver = "1.0.22"
-serde = { version = "1.0.197", features = [ "derive" ] }
-serde_derive = "1.0.197"
-serde_json = "1.0.115"
-shadow-rs = { version = "0.27.1", default-features = false }
+semver = "1.0.23"
+serde = { version = "1.0.210", features = [ "derive" ] }
+serde_json = "1.0.128"
+shadow-rs = { version = "0.34.0", default-features = false }
 skim = "0.10.4"
 strfmt = "0.2.4"
-tabled = { version = "0.15.0", default-features = false, features = [
+tabled = { version = "0.16.0", default-features = false, features = [
   "derive",
   "std",
 ] }
-tempfile = "3.10.1"
-thiserror = "1.0.58"
-tokio = { version = "1.37.0", features = [
+tempfile = "3.12.0"
+thiserror = "1.0.63"
+tokio = { version = "1.40.0", features = [
   "fs",
   "macros",
   "net",
   "rt",
   "rt-multi-thread",
 ] }
-toml = { version = "0.8.12", features = [ "preserve_order" ] }
+toml = { version = "0.8.19", features = [ "preserve_order" ] }
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = [ "env-filter" ] }
 walkdir = "2.5.0"
 xdg = "2.5.2"
 
 [build-dependencies]
-shadow-rs = { version = "0.27.1", default-features = false }
+shadow-rs = { version = "0.34.0", default-features = false }
 
 # Config for 'cargo dist'
 [workspace.metadata.dist]
 # The preferred cargo-dist version to use in CI (Cargo.toml SemVer syntax)
-cargo-dist-version = "0.13.0"
+cargo-dist-version = "0.22.1"
 # CI backends to support
-ci = [ "github" ]
+ci = "github"
 # The installers to generate for each app
 installers = [ "homebrew" ]
 # A GitHub repo to push Homebrew formulas to
@@ -110,7 +112,7 @@ tap = "dsully/homebrew-tap"
 targets = [ "aarch64-apple-darwin", "x86_64-unknown-linux-gnu" ]
 # Publish jobs to run in CI
 publish-jobs = [ "homebrew" ]
-# Publish jobs to run in CI
+# Which actions to run on pull requests
 pr-run-mode = "plan"
 
   # Use Apple Silicon runners.
