@@ -1,11 +1,11 @@
-use async_trait::async_trait;
+use std::io::Cursor;
+
 use clap::Args;
 use git_url_parse::GitUrl;
 use skim::{
     prelude::{SkimItemReader, SkimOptionsBuilder},
     Skim,
 };
-use std::io::Cursor;
 use tracing::{error, info};
 
 use crate::{
@@ -15,7 +15,7 @@ use crate::{
     install,
     spinner::spinner,
     system::System,
-    version::parse_version,
+    version,
 };
 
 #[derive(Debug, Clone, Args)]
@@ -70,14 +70,14 @@ async fn repository_releases(owner: &'_ str, repository: &'_ str, pre_release: b
             if pre_release && release.prerelease {
                 None
             } else {
-                Some(release.tag_name.to_string())
+                Some(release.tag_name.clone())
             }
         })
         .collect())
 }
 
-#[async_trait]
 impl RunCommand for Add {
+    //
     async fn run(self) -> Result<()> {
         let mut packages = Config::load()?;
         let system = System::default();
@@ -96,7 +96,7 @@ impl RunCommand for Add {
 
         let organization = url.owner.expect("Couldn't find an organization!");
         let repository = url.name;
-        let alias = self.alias.unwrap_or_else(|| repository.to_string());
+        let alias = self.alias.unwrap_or_else(|| repository.clone());
 
         let patterns = Patterns {
             asset: self.asset_pattern,
@@ -118,8 +118,8 @@ impl RunCommand for Add {
 
                 Skim::run_with(
                     &SkimOptionsBuilder::default()
-                        .color(Some(crate::config::skim_colors()))
-                        .height(Some("50%"))
+                        .color(Some(crate::config::skim_colors().to_string()))
+                        .height("50%".to_string())
                         .multi(true)
                         .reverse(true)
                         .build()
@@ -131,12 +131,12 @@ impl RunCommand for Add {
             } else {
                 match versions.first() {
                     Some(version) => version.into(),
-                    None => return Err(CommandError::ReleaseNotFound(self.name.to_string())),
+                    None => return Err(CommandError::ReleaseNotFound(self.name.clone())),
                 }
             }
         };
 
-        let parsed_version = parse_version(&version);
+        let parsed_version = version::parse(&version);
 
         let package = Package::new(&urlish, &alias, asset_pattern, file_pattern);
 

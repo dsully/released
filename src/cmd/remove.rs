@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use clap::Args;
 use tracing::debug;
 
@@ -14,8 +13,8 @@ pub struct Remove {
     name: String,
 }
 
-#[async_trait]
 impl RunCommand for Remove {
+    //
     async fn run(self) -> Result<()> {
         let mut config = Config::load()?;
 
@@ -40,7 +39,7 @@ impl RunCommand for Remove {
 
                 Ok(())
             }
-            _ => Err(CommandError::PackageNotFound { name: self.name.to_string() }),
+            _ => Err(CommandError::PackageNotFound { name: self.name.clone() }),
         }
     }
 }

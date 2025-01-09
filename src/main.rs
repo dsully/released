@@ -1,14 +1,13 @@
-#![deny(clippy::all, clippy::pedantic, clippy::unwrap_used)]
-#![allow(clippy::module_name_repetitions, clippy::missing_errors_doc, clippy::missing_panics_doc)]
+use std::io;
 
 use anyhow::Result;
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{generate, Shell as CompletionShell};
 use shadow_rs::shadow;
-use std::io;
 use tracing::info;
 use tracing_subscriber::{filter::filter_fn, prelude::*};
 
+// TODO: Replace with vergen-gitcl
 // https://crates.io/crates/shadow-rs
 shadow!(build);
 

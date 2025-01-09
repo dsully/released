@@ -1,8 +1,7 @@
+use std::env::consts::{ARCH, OS};
+use std::fmt::Display;
+
 use regex::Regex;
-use std::{
-    env::consts::{ARCH, OS},
-    fmt::Display,
-};
 use tracing::debug;
 
 #[derive(Debug, Clone)]
@@ -58,6 +57,7 @@ impl System {
     }
 }
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum OperatingSystem {
     Linux,

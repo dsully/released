@@ -1,9 +1,9 @@
-use async_trait::async_trait;
+use std::time::Instant;
+
 use clap::Args;
 use console::style;
 use indicatif::HumanDuration;
 use pluralizer::pluralize;
-use std::time::Instant;
 
 use crate::{
     cli::{Result, RunCommand},
@@ -20,8 +20,8 @@ pub struct Update {
     only: Option<String>,
 }
 
-#[async_trait]
 impl RunCommand for Update {
+    //
     async fn run(self) -> Result<()> {
         let mut config = Config::load()?;
         let system = System::default();

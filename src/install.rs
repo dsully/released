@@ -1,15 +1,17 @@
-use anyhow::{Context, Result};
-use decompress::{decompress, ExtractOptsBuilder};
-use futures::stream::StreamExt;
-use octocrab::models::repos::{Asset, Release};
-use regex::Regex;
-use reqwest::Url;
-use skim::prelude::*;
 use std::collections::HashMap;
 use std::fs;
 use std::io::Cursor;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
+
+use anyhow::{Context, Result};
+use decompress::{decompress, ExtractOptsBuilder};
+use futures::stream::StreamExt;
+use itertools::Itertools;
+use octocrab::models::repos::{Asset, Release};
+use regex::Regex;
+use reqwest::Url;
+use skim::prelude::*;
 use strfmt::strfmt;
 use tempfile::tempdir;
 use tokio::io::AsyncWriteExt;
@@ -20,7 +22,7 @@ use crate::{
     config::{Config, InstalledPackage, Package},
     errors::CommandError,
     system::System,
-    version::{parse_version, Version},
+    version::{self, Version},
 };
 
 pub async fn download(url: &Url, directory: &'_ Path) -> Result<PathBuf> {
@@ -35,15 +37,15 @@ pub async fn download(url: &Url, directory: &'_ Path) -> Result<PathBuf> {
 
     let destination = directory.join(filename);
 
-    debug!("Creating destination directory {:?}", directory);
+    debug!("Creating destination directory {}", directory.display());
 
     fs::create_dir_all(directory)?;
 
-    debug!("Creating destination file {:?}", &destination);
+    debug!("Creating destination file {}", &destination.display());
 
     let mut file = tokio::fs::File::create(&destination).await?;
 
-    debug!("Downloading {} ...", &filename);
+    debug!("Downloading {filename} ...");
 
     let mut stream = reqwest::get(url.clone()).await?.error_for_status()?.bytes_stream();
 
@@ -83,7 +85,7 @@ pub async fn latest_release_tag(owner: &'_ str, repo: &'_ str) -> Option<Version
         .get_latest()
         .await
         .ok()
-        .map(|tag| parse_version(&tag.tag_name))
+        .map(|tag| version::parse(&tag.tag_name))
 }
 
 pub fn platform_asset(release: &'_ Release, system: &'_ System, user_pattern: &'_ str, _show: bool) -> Option<Asset> {
@@ -135,17 +137,19 @@ pub fn platform_asset(release: &'_ Release, system: &'_ System, user_pattern: &'
     platform_assets.retain(|asset| system.is_arch_match(&asset.name));
 
     if platform_assets.is_empty() {
-        platform_assets = release.assets.clone();
+        platform_assets.clone_from(&release.assets);
     }
 
     match &platform_assets.len() {
         2.. => {
-            let reader = SkimItemReader::default().of_bufread(Cursor::new(platform_assets.iter().map(|a| a.name.to_string() + "\n").collect::<String>()));
+            let assets_list = platform_assets.iter().map(|a| a.name.clone()).collect_vec().join("\n");
+
+            let reader = SkimItemReader::default().of_bufread(Cursor::new(assets_list));
 
             let selected_item: Vec<Asset> = Skim::run_with(
                 &SkimOptionsBuilder::default()
-                    .color(Some(crate::config::skim_colors()))
-                    .height(Some("25%"))
+                    .color(Some(crate::config::skim_colors().to_string()))
+                    .height("25%".to_string())
                     .build()
                     .expect("Unable to build SkimOptionsBuilder"),
                 Some(reader),
@@ -179,6 +183,7 @@ fn find_binary(folder: &'_ Path, bin_name: &'_ str) -> Option<DirEntry> {
         .find(|entry| entry.file_name() == bin_name)
 }
 
+#[allow(clippy::module_name_repetitions)]
 pub async fn install_release(config: &mut Config, package: &'_ Package, system: &'_ System, version: Option<Version>, show: bool) -> Result<()> {
     let (owner, repo) = package.name.split_once('/').expect("Invalid package name");
 
@@ -203,7 +208,7 @@ pub async fn install_release(config: &mut Config, package: &'_ Package, system: 
 
     let Some(asset) = platform_asset(&release, system, &package.asset_pattern, show) else {
         return Err(CommandError::AssetNotFound {
-            package: package.name.to_string(),
+            package: package.name.clone(),
             version,
             arch: system.architecture.clone(),
             os: system.os.clone(),

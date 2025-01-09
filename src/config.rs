@@ -74,7 +74,7 @@ pub fn bin_path() -> Result<PathBuf> {
     Ok(bin_path.clone())
 }
 
-pub fn config_path() -> Result<PathBuf> {
+fn config_path() -> Result<PathBuf> {
     let xdg_dir = xdg::BaseDirectories::with_prefix("released").context("Failed get config directory")?;
 
     match xdg_dir.place_config_file("config.toml") {
@@ -87,7 +87,7 @@ pub fn config_path() -> Result<PathBuf> {
     }
 }
 
-pub fn state_path() -> Result<PathBuf> {
+fn state_path() -> Result<PathBuf> {
     let xdg_dir = xdg::BaseDirectories::with_prefix("released").context("Failed get config directory")?;
 
     match xdg_dir.place_state_file("installed.json") {

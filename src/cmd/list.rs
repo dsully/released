@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use clap::Args;
 use serde::Serialize;
 use tabled::{
@@ -27,8 +26,8 @@ struct Installed<'a> {
     repository: String,
 }
 
-#[async_trait]
 impl RunCommand for List {
+    //
     async fn run(self) -> Result<()> {
         let config = Config::load()?;
 
@@ -61,7 +60,7 @@ impl RunCommand for List {
     }
 }
 
-fn create_table(data: &[Installed]) -> Table {
+fn create_table(data: &[Installed<'_>]) -> Table {
     let theme = Style::modern().remove_top().remove_bottom().remove_left().remove_right();
 
     let mut table = Table::builder(data).build();

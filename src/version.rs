@@ -1,4 +1,5 @@
 use std::fmt::Display;
+
 use tracing::info;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -13,7 +14,7 @@ pub enum Version {
     Stable,
     /// Similar to Latest except will use pre-releases if there are any available for the tool
     PreRelease,
-    ///
+    /// A Simple Version String
     Simple(String),
 }
 
@@ -44,7 +45,7 @@ impl Display for Version {
     }
 }
 
-pub fn parse_version(provided_version: &'_ str) -> Version {
+pub fn parse(provided_version: &'_ str) -> Version {
     match provided_version.to_lowercase().as_str() {
         "latest" => Version::Latest,
         "stable" => Version::Stable,
