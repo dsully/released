@@ -138,7 +138,7 @@ impl RunCommand for Add {
 
         let parsed_version = version::parse(&version);
 
-        let package = Package::new(&urlish, &alias, asset_pattern, file_pattern);
+        let package = Package::new(&format!("{organization}/{repository}"), &alias, asset_pattern, file_pattern);
 
         let s = spinner();
 
